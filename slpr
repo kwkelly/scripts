@@ -1,0 +1,62 @@
+#!/bin/bash
+# print over ssh
+
+DEFAULT_SERVER=curie
+DEFAULT_PRINTER=cp3se
+
+usage="$(basename "$0") [-h] [-?] [-s -f -O -t -P] -- print over ssh
+
+where:
+	-h 	Show this help text
+	-? 	Show this help text
+	-s	Use a different server to print from (default: curie)
+	-f	specify the file (or just the last argument)
+	-O	Other printer options, pass as a string in quotes
+	-t	Test. print out the resulting command
+	-P	Specify the printer"
+
+while getopts "h?f:s:O:tP:" opt; do
+	case "$opt" in
+		h|\?)
+			echo "$usage"
+			exit 0
+			;;
+		f) FILE=$OPTARG
+			;;
+		s) SERVER=$OPTARG
+			;;
+		O) PRINTOPTS=$OPTARG
+			;;
+		t) TEST=true
+			;;
+		P) PRINTER=$OPTARG
+			;;
+	esac
+done
+shift $((OPTIND-1))
+
+# Check if a file is specified by option, otherwise it should be the last arg
+if [ -z "$FILE" ]
+then
+	if [[ -a "$@" ]]
+	then
+		FILE="$@"
+	else
+		echo "No file specified"
+		exit 0
+	fi
+fi
+
+if [ ! $TEST ]
+then
+	echo "${FILE}" && \
+	mkdir -p /tmp/slpr && \
+	cp "${FILE}" /tmp/slpr/tmp &&\
+	ssh ${SERVER:-${DEFAULT_SERVER}} mkdir -p /tmp/slpr && \
+	#FILE_NO_SPACE=${FILE// /_} &&\
+	scp /tmp/slpr/tmp ${SERVER:-${DEFAULT_SERVER}}:/tmp/slpr/tmp && \
+	ssh ${SERVER:-${DEFAULT_SERVER}} lpr $PRINTOPTS -P ${PRINTER:-${DEFAULT_PRINTER}} /tmp/slpr/tmp
+else
+	echo "cat \"$FILE\" | ssh ${SERVER:-${DEFAULT_SERVER}} lpr $PRINTOPTS -P ${PRINTER:-${DEFAULT_PRINTER}}"
+#	cat "$FILE"
+fi

@@ -1,0 +1,67 @@
+#!/bin/bash
+# use sshfs to mount and unmount
+
+usage="$(basename "$0") [-h] [-?] [-u] [-l] [-d -n ]-- create a directory by the name of the ssh server and mount it
+
+where:
+-h 	Show this help text
+-d  Specify the dir to mount on the server. Defaults to home
+-n 	What to name the mountpoint. Defaults to the server name inside HOME
+-l 	List currently mounted servers and their mountpoints
+-u	unmount and delete dir"
+
+UNMOUNT=false
+DEFAULT_DIR=
+
+while getopts "h?uld:n:" opt; do
+	case "$opt" in
+		h|\?)
+			echo "$usage"
+			exit 0
+			;;
+		u) UNMOUNT=true
+			;;
+		l) echo "$(mount | grep osxfusefs)"
+			exit 0
+			;;
+		d) DIR=$OPTARG
+			;;
+		n) NAME=$OPTARG
+			;;
+	esac
+done
+shift $((OPTIND-1))
+
+MNT=${@:-1} # last argument
+
+
+if [ "$UNMOUNT" = true ]
+then
+	if [ -z "$NAME" ] ; then
+		STRING=$( mount | grep osxfusefs | grep "${MNT}:" ) #These two lines get the mountpoint for the given server
+		NAME=$( echo "${STRING}" | cut -d " " -f 3 )
+	else
+		#get the server name
+		STRING=$( mount | grep osxfusefs | grep "${NAME%/}" ) #These two lines get the mountpoint for the given server
+		MNT=$( echo "${STRING}" | cut -d " " -f 1 )
+
+		if [ ! -d "${NAME}" ]; then
+			echo "Not a valid directory"
+			exit -1
+		fi
+		umount -f ${NAME} && echo "Disconnected from ${MNT%:}"
+		rmdir ${NAME} && echo "Removed ${NAME}"
+	fi
+else
+	DIR=${DIR:-$(echo "$DEFAULT_DIR")}
+	NAME=${NAME:-$(echo "$HOME/$MNT")}
+	mkdir -p ${NAME}
+	if sshfs ${MNT}:${DIR} ${NAME} ; then
+		echo "Mounted ${MNT}"
+		exit 0
+	else
+		echo "Could not connect to ${MNT}"
+		rmdir ${NAME}
+		#echo $MNT
+	fi
+fi
