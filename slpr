@@ -49,14 +49,13 @@ fi
 
 if [ ! $TEST ]
 then
+	# create a tmp dir, copy the file over and then pring it
 	echo "${FILE}" && \
 	mkdir -p /tmp/slpr && \
 	cp "${FILE}" /tmp/slpr/tmp &&\
 	ssh ${SERVER:-${DEFAULT_SERVER}} mkdir -p /tmp/slpr && \
-	#FILE_NO_SPACE=${FILE// /_} &&\
 	scp /tmp/slpr/tmp ${SERVER:-${DEFAULT_SERVER}}:/tmp/slpr/tmp && \
 	ssh ${SERVER:-${DEFAULT_SERVER}} lpr $PRINTOPTS -P ${PRINTER:-${DEFAULT_PRINTER}} /tmp/slpr/tmp
 else
 	echo "cat \"$FILE\" | ssh ${SERVER:-${DEFAULT_SERVER}} lpr $PRINTOPTS -P ${PRINTER:-${DEFAULT_PRINTER}}"
-#	cat "$FILE"
 fi

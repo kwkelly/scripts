@@ -62,6 +62,5 @@ else
 	else
 		echo "Could not connect to ${MNT}"
 		rmdir ${NAME}
-		#echo $MNT
 	fi
 fi
