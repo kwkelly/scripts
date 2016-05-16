@@ -4,11 +4,20 @@
 usage="$(basename "$0") [-h] [-?] [-u] [-l] [-d -n ]-- create a directory by the name of the ssh server and mount it
 
 where:
--h 	Show this help text
--d  Specify the dir to mount on the server. Defaults to home
+-h	Show this help text
+-d	Specify the dir on the server to mount as the base. Defaults to home
 -n 	What to name the mountpoint. Defaults to the server name inside HOME
 -l 	List currently mounted servers and their mountpoints
--u	unmount and delete dir"
+-u	unmount and delete dir
+
+example:
+	smnt \$server
+		This mounts \$server in the home directory in a directory called \$server
+	
+	To unmount:
+	smnt -u -n \$server
+		This unmounts the server by the name of the mountpont
+"
 
 UNMOUNT=false
 DEFAULT_DIR=
@@ -35,7 +44,7 @@ shift $((OPTIND-1))
 MNT=${@:-1} # last argument
 
 
-if [ "$UNMOUNT" = true ]
+if [ "$UNMOUNT" = true ] # we are unmounting
 then
 	if [ -z "$NAME" ] ; then
 		STRING=$( mount | grep osxfusefs | grep "${MNT}:" ) #These two lines get the mountpoint for the given server
@@ -52,9 +61,16 @@ then
 		umount -f ${NAME} && echo "Disconnected from ${MNT%:}"
 		rmdir ${NAME} && echo "Removed ${NAME}"
 	fi
-else
+else  # we are trying to mount
 	DIR=${DIR:-$(echo "$DEFAULT_DIR")}
 	NAME=${NAME:-$(echo "$HOME/$MNT")}
+
+	if [ -d "${NAME}" ]; then
+		if [ -n "$(ls -A ${NAME})" ]; then
+			echo "Directory exists and is not empty. Choose a different mountpoint"
+			exit -1
+		fi
+	fi
 	mkdir -p ${NAME}
 	if sshfs ${MNT}:${DIR} ${NAME} ; then
 		echo "Mounted ${MNT}"
